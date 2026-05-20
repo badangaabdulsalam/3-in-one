@@ -154,12 +154,22 @@ async function fetchAndRenderProducts() {
     }
 
     const data = await response.json();
-    if (!data || typeof data !== "object") {
+    if (!data || (typeof data !== "object" && !Array.isArray(data))) {
       throw new Error("Invalid response data format");
     }
-    
-    state.products = Array.isArray(data.items) ? data.items : [];
-    state.categories = ["All", ...(data.categories || [])];
+
+    // Support two shapes for products.json:
+    // 1) { items: [...], categories: [...] }
+    // 2) [...] (top-level array)
+    const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+    state.products = items;
+
+    if (Array.isArray(data.categories) && data.categories.length) {
+      state.categories = ["All", ...(data.categories || [])];
+    } else {
+      const derived = Array.from(new Set(items.map((p) => p.category).filter(Boolean)));
+      state.categories = ["All", ...derived];
+    }
 
     renderCategoryOptions();
     syncCartWithInventory();
