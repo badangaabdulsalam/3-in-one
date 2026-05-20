@@ -4,26 +4,7 @@ function roundMoney(value) {
   return Number(value.toFixed(2));
 }
 
-function estimateTotals(items, productsMap) {
-  const subtotal = items.reduce((sum, line) => {
-    const p = productsMap[line.productId];
-    const price = p ? Number(p.price) : 0;
-    return sum + price * line.quantity;
-  }, 0);
-
-  const TAX_RATE = 0.07;
-  const SHIPPING_FLAT = 16000;
-  const FREE_SHIPPING_THRESHOLD = 288000;
-
-  const roundedSubtotal = roundMoney(subtotal);
-  const shipping = roundedSubtotal >= FREE_SHIPPING_THRESHOLD || roundedSubtotal === 0 ? 0 : SHIPPING_FLAT;
-  const tax = roundMoney(roundedSubtotal * TAX_RATE);
-  const total = roundMoney(roundedSubtotal + shipping + tax);
-
-  return { subtotal: roundedSubtotal, shipping, tax, total };
-}
-
-function buildPlainTextEmail(orderId, customer, notes, items, totals, productsMap) {
+function buildPlainTextEmail(orderId, customer, notes, items, totals) {
   let lines = [];
   lines.push(`Order ID: ${orderId}`);
   lines.push(`Name: ${customer.name}`);
@@ -35,10 +16,7 @@ function buildPlainTextEmail(orderId, customer, notes, items, totals, productsMa
   lines.push('Items:');
 
   for (const line of items) {
-    const p = productsMap[line.productId];
-    const title = p ? p.name : line.productId;
-    const price = p ? currencyFormatter(p.price) : 'N/A';
-    lines.push(`- ${title} (${line.productId}) x${line.quantity} @ ${price}`);
+    lines.push(`- ${line.productId} x${line.quantity}`);
   }
 
   lines.push('');
@@ -84,22 +62,13 @@ exports.handler = async function (event, context) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Missing SendGrid configuration. Set SENDGRID_API_KEY and SENDGRID_TO on Netlify.' }) };
   }
 
-  // try to load public/products.json to get product titles/prices
-  let products = [];
-  try {
-    const productsRaw = await fetch(`${process.env.URL || ''}/products.json`).then((r) => r.json());
-    products = Array.isArray(productsRaw) ? productsRaw : [];
-  } catch (e) {
-    products = [];
-  }
-
-  const productsMap = products.reduce((map, p) => ({ ...map, [p.id]: p }), {});
-
   const orderId = `ORD-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
 
-  const totals = clientTotals || estimateTotals(cart, productsMap);
+  const totals = clientTotals && typeof clientTotals.total === 'number'
+    ? clientTotals
+    : { subtotal: 0, shipping: 0, tax: 0, total: 0 };
 
-  const plain = buildPlainTextEmail(orderId, customer, notes, cart, totals, productsMap);
+  const plain = buildPlainTextEmail(orderId, customer, notes, cart, totals);
 
   const emailBody = {
     personalizations: [
