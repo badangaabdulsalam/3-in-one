@@ -148,7 +148,7 @@ function bindEvents() {
 
 async function fetchAndRenderProducts() {
   try {
-    const response = await fetch("/api/products?sort=featured");
+    const response = await fetch("/products.json");
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -554,14 +554,15 @@ async function handleCheckout(event) {
     cart: state.cart.map((line) => ({
       productId: line.productId,
       quantity: line.quantity
-    }))
+    })),
+    totals: estimateTotals()
   };
 
   state.checkoutPending = true;
   setCheckoutMessage("Placing your order...", false);
 
   try {
-    const response = await fetch("/api/orders", {
+    const response = await fetch("/.netlify/functions/checkout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -600,32 +601,8 @@ async function handleCheckout(event) {
 
 async function handleTrackOrder(event) {
   event.preventDefault();
-
-  const rawOrderId = (els.trackOrderId?.value || "").trim().toUpperCase();
-  if (!rawOrderId) {
-    if (els.trackOrderResult) {
-      els.trackOrderResult.textContent = "Enter an order ID first.";
-    }
-    return;
-  }
-
   if (els.trackOrderResult) {
-    els.trackOrderResult.textContent = "Looking up your order...";
-  }
-
-  try {
-    const response = await fetch(`/api/orders/${encodeURIComponent(rawOrderId)}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || "Order not found.");
-    }
-
-    renderTrackedOrder(result);
-  } catch (error) {
-    if (els.trackOrderResult) {
-      els.trackOrderResult.textContent = error.message || "Could not fetch order.";
-    }
+    els.trackOrderResult.textContent = "Order tracking is not available on this Netlify deployment.";
   }
 }
 

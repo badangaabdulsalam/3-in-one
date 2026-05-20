@@ -2,12 +2,10 @@
   "name": "chaos-bazaar-website",
   "version": "1.0.0",
   "description": "A wild, fun ecommerce website with real ordering flow.",
-  "main": "src/server.js",
+  "main": "public/index.html",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "audit": "node scripts/audit-site.js",
-    "start:prod": "node src/server.js"
+    "start": "echo \"This is a static frontend for Netlify. No local server to start.\"",
+    "audit": "node scripts/audit-site.js"
   },
   "keywords": [
     "website",
